@@ -8,24 +8,25 @@
 #include "NvInfer.h"
 #include <memory>
 #include <tkDNN/kernels.h>
-#include <pluginsRT/ActivationLeakyRT.h>
-#include <pluginsRT/ActivationLogisticRT.h>
-#include <pluginsRT/ActivationMishRT.h>
-#include <pluginsRT/ActivationReLUCeilingRT.h>
-#include <pluginsRT/DeformableConvRT.h>
-#include <pluginsRT/FlattenConcatRT.h>
-#include <pluginsRT/MaxPoolingFixedSizeRT.h>
-#include <pluginsRT/RegionRT.h>
-#include <pluginsRT/ReorgRT.h>
-#include <pluginsRT/ReshapeRT.h>
-#include <pluginsRT/ResizeLayerRT.h>
-#include <pluginsRT/RouteRT.h>
-#include <pluginsRT/ShortcutRT.h>
-#include <pluginsRT/UpsampleRT.h>
-#include <pluginsRT/YoloRT.h>
-#include <pluginsRT/ConstantPaddingRT.h>
-#include <pluginsRT/ReflectionPadding.h>
-
+#include "pluginsRT/ActivationLeakyRT.h"
+#include "pluginsRT/ActivationLogisticRT.h"
+#include "pluginsRT/ActivationMishRT.h"
+#include "pluginsRT/ActivationReLUCeilingRT.h"
+#include "pluginsRT/DeformableConvRT.h"
+#include "pluginsRT/FlattenConcatRT.h"
+#include "pluginsRT/MaxPoolingFixedSizeRT.h"
+#include "pluginsRT/RegionRT.h"
+#include "pluginsRT/ReorgRT.h"
+#include "pluginsRT/ReshapeRT.h"
+#include "pluginsRT/ResizeLayerRT.h"
+#include "pluginsRT/RouteRT.h"
+#include "pluginsRT/ShortcutRT.h"
+#include "pluginsRT/UpsampleRT.h"
+#include "pluginsRT/YoloRT.h"
+#include "pluginsRT/ConstantPaddingRT.h"
+#include "pluginsRT/ReflectionPadding.h"
+#include "Profiler_tkdnn.h"
+#include <libsmctrl.h>
 
 
 namespace tk { namespace dnn {
@@ -52,10 +53,12 @@ public:
     dataDim_t input_dim, output_dim;
     dnnType *output;
     cudaStream_t stream;
+    tkDNN::Profiler_tkdnn prof;
 
     std::vector<nvinfer1::YoloRT*> yolo_plugins; // yolo layers in network
 
-    NetworkRT(Network *net, const char *name);
+    NetworkRT(Network *net, const char *name, const uint64_t mask=0);
+    // NetworkRT(Network *net, const char *name);
     virtual ~NetworkRT();
 
     int getMaxBatchSize() {
@@ -77,7 +80,7 @@ public:
     */
     dnnType* infer(dataDim_t &dim, dnnType* data);
     void enqueue(int batchSize = 1);    
-
+    int set_stream(uint64_t stream_mask);
     nvinfer1::ILayer* convert_layer(nvinfer1::ITensor *input, Layer *l);
     nvinfer1::ILayer* convert_layer(nvinfer1::ITensor *input, Conv2d *l);
     nvinfer1::ILayer* convert_layer(nvinfer1::ITensor *input, Activation *l);

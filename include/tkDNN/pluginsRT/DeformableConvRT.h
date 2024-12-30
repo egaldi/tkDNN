@@ -5,7 +5,7 @@
 #include <vector>
 #include<cassert>
 #include "../kernels.h"
-#include <tkdnn.h>
+#include "../tkdnn.h"
 
 namespace nvinfer1 {
     class DeformableConvRT : public IPluginV2Ext {

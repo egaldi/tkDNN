@@ -68,6 +68,7 @@ class DetectionNN {
 
     public:
         int classes = 0;
+        
         float confThreshold = 0.3; /*threshold on the confidence of the boxes*/
 
         std::vector<tk::dnn::box> detected; /*bounding boxes in output*/
@@ -87,8 +88,12 @@ class DetectionNN {
          * @param n_batches maximum number of batches to use in inference
          * @return true if everything is correct, false otherwise.
          */
-        virtual bool init(const std::string& tensor_path, const int n_classes=80, const int n_batches=1, const float conf_thresh=0.3) = 0;
-        
+        virtual bool init(const std::string& tensor_path, const int n_classes=80, const int n_batches=1, const float conf_thresh=0.3, const uint64_t mask=0) = 0;
+        // virtual bool init(const std::string& tensor_path, const int n_classes=80, const int n_batches=1, const float conf_thresh=0.3) = 0;
+        // void set_stream(uint64_t mask){
+        //     printf("detNN: %llu\n", mask);
+        //     netRT->set_stream(mask);
+        // }
         /**
          * This method performs the whole detection of the NN.
          * 

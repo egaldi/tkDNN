@@ -3,11 +3,70 @@
 
 namespace tk { namespace dnn {
 
-    bool Yolo3Detection::init(const std::string& tensor_path, const int n_classes, const int n_batches, const float conf_thresh) {
+//     bool Yolo3Detection::init(const std::string &tensor_path, const int n_classes, const int n_batches, const float conf_thresh) {
 
+//     //convert network to tensorRT
+//     std::cout<<(tensor_path).c_str()<<"\n";
+    
+//     netRT = new tk::dnn::NetworkRT(nullptr, (tensor_path).c_str() );
+
+//     nBatches = n_batches;
+//     confThreshold = conf_thresh;
+//     tk::dnn::dataDim_t idim = netRT->input_dim;    
+//     idim.n = nBatches;
+
+//     if(netRT->yolo_plugins.size() < 2 ) {
+//         FatalError("this is not yolo3");
+//     }
+
+//     for(int i=0; i<netRT->yolo_plugins.size(); i++) {
+//         nvinfer1::YoloRT *yRT = netRT->yolo_plugins[i];
+//         classes = yRT->classes;
+//         num = yRT->num;
+//         nMasks = yRT->n_masks;
+
+//         // make a yolo layer to interpret predictions
+//         yolo[i] = new tk::dnn::Yolo(nullptr, classes, nMasks, ""); // yolo without input and bias
+//         yolo[i]->mask_h = new dnnType[nMasks];
+//         yolo[i]->bias_h = new dnnType[num*nMasks*2];
+//         memcpy(yolo[i]->mask_h, yRT->mask.data(), sizeof(dnnType)*nMasks);
+//         memcpy(yolo[i]->bias_h, yRT->bias.data(), sizeof(dnnType)*num*nMasks*2);
+//         yolo[i]->input_dim = yolo[i]->output_dim = tk::dnn::dataDim_t(1, yRT->c, yRT->h, yRT->w);
+//         yolo[i]->classesNames = yRT->classesNames;
+//         yolo[i]->nms_thresh = yRT->nms_thresh;
+//         yolo[i]->nsm_kind = (tk::dnn::Yolo::nmsKind_t) yRT->nms_kind;
+//         yolo[i]->new_coords = yRT->new_coords;
+//     }
+
+//     dets = tk::dnn::Yolo::allocateDetections(tk::dnn::Yolo::MAX_DETECTIONS, classes);
+// #ifndef OPENCV_CUDACONTRIB
+//     checkCuda(cudaMallocHost(&input, sizeof(dnnType)*idim.tot()));
+// #endif
+//     checkCuda(cudaMalloc(&input_d, sizeof(dnnType)*idim.tot()));
+
+//     // class colors precompute    
+//     for(int c=0; c<classes; c++) {
+//         int offset = c*123457 % classes;
+//         float r = getColor(2, offset, classes);
+//         float g = getColor(1, offset, classes);
+//         float b = getColor(0, offset, classes);
+//         colors[c] = cv::Scalar(int(255.0*b), int(255.0*g), int(255.0*r));
+//     }
+
+//     classesNames = getYoloLayer()->classesNames;
+//     return true;
+// }
+
+
+bool Yolo3Detection::init(const std::string &tensor_path, const int n_classes, const int n_batches, const float conf_thresh, const uint64_t mask) {
+    // bool Yolo3Detection::init(const std::string &tensor_path, const int n_classes, const int n_batches, const float conf_thresh) {
+
+    printf("%lu maschera in Yolo\n",mask);
     //convert network to tensorRT
     std::cout<<(tensor_path).c_str()<<"\n";
-    netRT = new tk::dnn::NetworkRT(nullptr, (tensor_path).c_str() );
+    
+    netRT = new tk::dnn::NetworkRT(nullptr, (tensor_path).c_str(), mask );
+    // netRT = new tk::dnn::NetworkRT(nullptr, (tensor_path).c_str());
 
     nBatches = n_batches;
     confThreshold = conf_thresh;
@@ -54,9 +113,11 @@ namespace tk { namespace dnn {
 
     classesNames = getYoloLayer()->classesNames;
     return true;
-} 
+}
 
-void Yolo3Detection::preprocess(cv::Mat &frame, const int bi){
+
+void Yolo3Detection::preprocess(cv::Mat &frame, const int bi)
+{
 #ifdef OPENCV_CUDACONTRIB
     cv::cuda::GpuMat orig_img, img_resized;
     orig_img = cv::cuda::GpuMat(frame);

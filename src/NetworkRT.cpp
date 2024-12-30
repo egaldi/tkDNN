@@ -11,7 +11,7 @@
 
 #include "NetworkRT.h"
 #include "Int8Calibrator.h"
-
+#include "../../libsmctrl/libsmctrl.h"
 
 using namespace nvinfer1;
 
@@ -31,8 +31,199 @@ namespace tk { namespace dnn {
 
 std::map<Layer*, nvinfer1::ITensor*>tensors;
 
-NetworkRT::NetworkRT(Network *net, const char *name) {
+// NetworkRT::NetworkRT(Network *net, const char *name) {
 
+//     float rt_ver = float(NV_TENSORRT_MAJOR) +
+//                    float(NV_TENSORRT_MINOR)/10 +
+//                    float(NV_TENSORRT_PATCH)/100;
+//     std::cout<<"New NetworkRT (TensorRT v"<<rt_ver<<")\n";
+
+//     builderRT = createInferBuilder(loggerRT);
+//     std::cout<<"Float16 support: "<<builderRT->platformHasFastFp16()<<"\n";
+//     std::cout<<"Int8 support: "<<builderRT->platformHasFastInt8()<<"\n";
+// #if NV_TENSORRT_MAJOR >= 5
+//     std::cout<<"DLAs: "<<builderRT->getNbDLACores()<<"\n";
+// #endif
+//     networkRT = builderRT->createNetworkV2(0U);
+// #if NV_TENSORRT_MAJOR >= 6
+//         configRT = builderRT->createBuilderConfig();
+// #endif
+
+//     if(!fileExist(name)) {
+// #if NV_TENSORRT_MAJOR >= 6
+//         // Calibrator life time needs to last until after the engine is built.
+//         std::unique_ptr<IInt8EntropyCalibrator> calibrator;
+
+//         configRT->setAvgTimingIterations(1);
+//         configRT->setMinTimingIterations(1);
+//         configRT->setMaxWorkspaceSize(1 << 30);
+//         configRT->setFlag(BuilderFlag::kDEBUG);
+
+// #endif
+//         //input and dataType
+//         dataDim_t dim = net->layers[0]->input_dim;
+//         dtRT = DataType::kFLOAT;
+
+//         builderRT->setMaxBatchSize(net->maxBatchSize);
+
+//         if(net->fp16 && builderRT->platformHasFastFp16()) {
+//             dtRT = DataType::kHALF;
+// #if NV_TENSORRT_MAJOR >= 6
+//             configRT->setFlag(BuilderFlag::kFP16);
+// #endif
+//         }
+// #if NV_TENSORRT_MAJOR >= 5
+//         if(net->dla && builderRT->getNbDLACores() > 0) {
+//             dtRT = DataType::kHALF;
+//             configRT->setFlag(BuilderFlag::kFP16);
+//             configRT->setFlag(BuilderFlag::kGPU_FALLBACK);
+//             configRT->setDefaultDeviceType(DeviceType::kDLA);
+//             configRT->setDLACore(0);
+//         }
+// #endif
+// #if NV_TENSORRT_MAJOR >= 6
+//         if(net->int8 && builderRT->platformHasFastInt8()){
+//             // dtRT = DataType::kINT8;
+//             // builderRT->setInt8Mode(true);
+//             configRT->setFlag(BuilderFlag::kINT8);
+//             BatchStream calibrationStream(dim, 1, 100,      //TODO: check if 100 images are sufficient to the calibration (or 4951)
+//                                             net->fileImgList, net->fileLabelList);
+
+//             /* The calibTableFilePath contains the path+filename of the calibration table.
+//              * Each calibration table can be found in the corresponding network folder (../Test/*).
+//              * Each network is located in a folder with the same name as the network.
+//              * If the folder has a different name, the calibration table is saved in build/ folder.
+//              */
+//             std::string calib_table_name = net->networkName + "/" + net->networkNameRT.substr(0, net->networkNameRT.find('.')) + "-calibration.table";
+//             std::string calib_table_path = net->networkName;
+//             if(!fileExist((const char *)calib_table_path.c_str()))
+//                 calib_table_name = "./" + net->networkNameRT.substr(0, net->networkNameRT.find('.')) + "-calibration.table";
+
+//             calibrator.reset(new Int8EntropyCalibrator(calibrationStream, 1,
+//                                             calib_table_name,
+//                                             "data"));
+//             configRT->setInt8Calibrator(calibrator.get());
+//         }
+// #endif
+
+//         // add input layer
+//         ITensor *input = networkRT->addInput("data", DataType::kFLOAT,
+//                         Dims3{ dim.c, dim.h, dim.w});
+//         checkNULL(input);
+
+//         //add other layers
+//         for(int i=0; i<net->num_layers; i++) {
+//             Layer *l = net->layers[i];
+//             ILayer *Ilay = convert_layer(input, l);
+// #if NV_TENSORRT_MAJOR >= 6
+//             if(net->int8 && builderRT->platformHasFastInt8())
+//             {
+//                 Ilay->setPrecision(DataType::kINT8);
+//             }
+// #endif
+//             Ilay->setName( (l->getLayerName() + std::to_string(i)).c_str() );
+
+//             input = Ilay->getOutput(0);
+//             input->setName( (l->getLayerName() + std::to_string(i) + "_out").c_str() );
+
+//             if(l->final)
+//                 networkRT->markOutput(*input);
+//             tensors[l] = input;
+//         }
+//         if(input == NULL)
+//             FatalError("conversion failed");
+
+//         //build tensorRT
+//         input->setName("out");
+//         networkRT->markOutput(*input);
+
+//         std::cout<<"Selected maxBatchSize: "<<builderRT->getMaxBatchSize()<<"\n";
+//         printCudaMemUsage();
+//         std::cout<<"Building tensorRT cuda engine...\n";
+// #if NV_TENSORRT_MAJOR >= 6 && NV_TENSORRT_MAJOR <=7
+//         engineRT = builderRT->buildEngineWithConfig(*networkRT, *configRT);
+// #elif NV_TENSORRT_MAJOR < 6
+//         engineRT = builderRT->buildCudaEngine(*networkRT);
+//         //engineRT = std::shared_ptr<nvinfer1::ICudaEngine>(builderRT->buildCudaEngine(*networkRT));
+// #elif NV_TENSORRT_MAJOR >=8
+//         IHostMemory *serializedEngineRT = builderRT->buildSerializedNetwork(*networkRT,*configRT);
+
+// #endif
+// #if NV_TENSORRT_MAJOR > 5 && NV_TENSORRT_MAJOR < 8
+//         if(engineRT == nullptr)
+//             FatalError("cloud not build cuda engine")
+//         // we don't need the network any more
+//         //networkRT->destroy();
+//         std::cout<<"serialize net\n";
+//         builderActive = true;
+//         serialize(name);
+// #else
+//         if(serializedEngineRT == nullptr){
+//             FatalError("could not build cuda engine");
+//         }
+//         std::cout<<"saving serialized network to file"<<std::endl;
+//         builderActive = true;
+//         serialize(name,serializedEngineRT);
+//         delete serializedEngineRT;
+// #if NV_TENSORRT_MAJOR >= 8
+//         deserialize(name);
+// #endif
+
+// #endif
+//     } else {
+//         builderActive = false;
+//         deserialize(name);
+//     }
+
+//     std::cout<<"create execution context\n";
+// 	contextRT = engineRT->createExecutionContext();
+
+// 	// input and output buffer pointers that we pass to the engine - the engine requires exactly IEngine::getNbBindings(),
+// 	std::cout<<"Input/outputs numbers: "<<engineRT->getNbBindings()<<"\n";
+//     if(engineRT->getNbBindings() > MAX_BUFFERS_RT)
+//         FatalError("over RT buffer array size");
+
+// 	// In order to bind the buffers, we need to know the names of the input and output tensors.
+// 	// note that indices are guaranteed to be less than IEngine::getNbBindings()
+// 	buf_input_idx = engineRT->getBindingIndex("data");
+//     buf_output_idx = engineRT->getBindingIndex("out");
+//     std::cout<<"input index = "<<buf_input_idx<<" -> output index = "<<buf_output_idx<<"\n";
+
+
+//     Dims iDim = engineRT->getBindingDimensions(buf_input_idx);
+//     input_dim.n = 1;
+//     input_dim.c = iDim.d[0];
+//     input_dim.h = iDim.d[1];
+//     input_dim.w = iDim.d[2];
+//     input_dim.print();
+
+//     Dims oDim = engineRT->getBindingDimensions(buf_output_idx);
+//     output_dim.n = 1;
+//     output_dim.c = oDim.d[0];
+//     output_dim.h = oDim.d[1];
+//     output_dim.w = oDim.d[2];
+//     output_dim.print();
+//     if(builderActive){
+//         std::cout<<"NUMBER OF LAYERS IN NETWORK : "<<networkRT->getNbLayers()<<std::endl;
+//     }
+//     std::cout<<"NUMBER OF LAYERS IN ENGINE : "<<engineRT->getNbLayers()<<std::endl;
+
+//     // create GPU buffers and a stream
+//     for(int i=0; i<engineRT->getNbBindings(); i++) {
+//         Dims dim = engineRT->getBindingDimensions(i);
+//         buffersDIM[i] = dataDim_t(1, dim.d[0], dim.d[1], dim.d[2]);
+//         std::cout<<"RtBuffer "<<i<<"   dim: "; buffersDIM[i].print();
+//         checkCuda(cudaMalloc(&buffersRT[i], engineRT->getMaxBatchSize()*dim.d[0]*dim.d[1]*dim.d[2]*sizeof(dnnType)));
+//     }
+//     checkCuda(cudaMalloc(&output, engineRT->getMaxBatchSize()*output_dim.tot()*sizeof(dnnType)));
+
+//         checkCuda(cudaStreamCreate(&stream));
+    
+// }
+
+NetworkRT::NetworkRT(Network *net, const char *name, const uint64_t maskStream) {
+// NetworkRT::NetworkRT(Network *net, const char *name) {
+    // prof(std::to_string(3.1));
     float rt_ver = float(NV_TENSORRT_MAJOR) +
                    float(NV_TENSORRT_MINOR)/10 +
                    float(NV_TENSORRT_PATCH)/100;
@@ -110,7 +301,9 @@ NetworkRT::NetworkRT(Network *net, const char *name) {
         ITensor *input = networkRT->addInput("data", DataType::kFLOAT,
                         Dims3{ dim.c, dim.h, dim.w});
         checkNULL(input);
-
+        std::cout << "input:"<<input->getDimensions().nbDims << std::endl;
+        int count=0;
+        // printf("num_layrs %d\n",net->num_layers); 
         //add other layers
         for(int i=0; i<net->num_layers; i++) {
             Layer *l = net->layers[i];
@@ -125,7 +318,9 @@ NetworkRT::NetworkRT(Network *net, const char *name) {
 
             input = Ilay->getOutput(0);
             input->setName( (l->getLayerName() + std::to_string(i) + "_out").c_str() );
-
+            // if(count>195)
+            //     printf("qui %d\n",count); 
+            //     count++;
             if(l->final)
                 networkRT->markOutput(*input);
             tensors[l] = input;
@@ -215,8 +410,29 @@ NetworkRT::NetworkRT(Network *net, const char *name) {
         std::cout<<"RtBuffer "<<i<<"   dim: "; buffersDIM[i].print();
         checkCuda(cudaMalloc(&buffersRT[i], engineRT->getMaxBatchSize()*dim.d[0]*dim.d[1]*dim.d[2]*sizeof(dnnType)));
     }
+
+    // printf("Max batch size:%d\n",engineRT->getMaxBatchSize());
     checkCuda(cudaMalloc(&output, engineRT->getMaxBatchSize()*output_dim.tot()*sizeof(dnnType)));
-	checkCuda(cudaStreamCreate(&stream));
+    // uint64_t maskStream=~0xfull;
+    // printf("libsm mask fuori: %lu\n", maskStream);
+    if(maskStream !=0){
+        uint32_t numtpcs, numgpcs;
+        uint64_t *tpcs_for_gpc;
+        // libsmctrl_get_tpc_info(&numtpcs, 0);
+        // std::cout << "Valore in decimale TPCS:" <<(numtpcs) << std::endl;
+        // libsmctrl_get_tpc_info_cuda(&numtpcs,0);
+        // std::cout << "Valore in decimale TPCS_CUDA:" <<(numtpcs) << std::endl;
+        // libsmctrl_get_gpc_info(&numgpcs,&tpcs_for_gpc,0);
+        // std::cout << "Valore in decimale GPCs:" <<(numgpcs) << std::endl;
+        uint64_t mask = ~0x1ull;
+        libsmctrl_set_global_mask(mask);
+        checkCuda(cudaStreamCreate(&stream));
+        // printf("libsm mask: %lu\n", maskStream);
+        libsmctrl_set_stream_mask(stream,maskStream);
+    }
+    else
+        checkCuda(cudaStreamCreate(&stream));
+    
 }
 
 NetworkRT::~NetworkRT() {
@@ -228,20 +444,31 @@ dnnType* NetworkRT::infer(dataDim_t &dim, dnnType* data) {
     if(batches > getMaxBatchSize()) {
         FatalError("input batch size too large");
     }
-
+    // printf("inizio infer\n");
+    prof.tick("infer");
     checkCuda(cudaMemcpyAsync(buffersRT[buf_input_idx], data, batches*input_dim.tot()*sizeof(dnnType), cudaMemcpyDeviceToDevice, stream));
     contextRT->enqueue(batches, buffersRT, stream, nullptr);
     checkCuda(cudaMemcpyAsync(output, buffersRT[buf_output_idx], batches*output_dim.tot()*sizeof(dnnType), cudaMemcpyDeviceToDevice, stream));
     checkCuda(cudaStreamSynchronize(stream));
+    prof.tock("infer");
 
     dim = output_dim;
     dim.n = batches;
-
+    prof.printStats();
     return output;
 }
 
 void NetworkRT::enqueue(int batchSize) {
     contextRT->enqueue(batchSize, buffersRT, stream, nullptr);
+}
+
+int NetworkRT::set_stream(uint64_t stream_mask){
+    // uint64_t mask = ~0x1ull;
+    // libsmctrl_set_global_mask(mask);
+    // stream_mask=18446744073709551600;
+    printf("NetworkRT stream mask: %hu\n", stream_mask);
+    // stream_mask=~0xfull;
+    libsmctrl_set_stream_mask(stream,stream_mask);
 }
 
 ILayer* NetworkRT::convert_layer(ITensor *input, Layer *l) {
@@ -608,6 +835,7 @@ ILayer* NetworkRT::convert_layer(ITensor *input, Activation *l) {
         checkNULL(lRT);
         return lRT;
 #else
+        std::cout << "activa :"<<input->getDimensions().nbDims << std::endl;
         IActivationLayer *lRT = networkRT->addActivation(*input, ActivationType::kLEAKY_RELU);
         lRT->setAlpha(l->slope);
         checkNULL(lRT);
@@ -860,6 +1088,7 @@ ILayer* NetworkRT::convert_layer(ITensor *input, Upsample *l) {
     checkNULL(lRT);
     return lRT;
 #else
+    std::cout << "upsample :"<<input->getDimensions().nbDims << std::endl;
     auto *lRT = networkRT->addResize(*input);
     lRT->setResizeMode(ResizeMode::kNEAREST);
     lRT->setOutputDimensions(Dims3{l->output_dim.c, l->output_dim.h, l->output_dim.w});

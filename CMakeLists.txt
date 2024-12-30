@@ -64,7 +64,11 @@ if(WIN32)
 set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS ON)
 endif(WIN32)
 
-include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include/tkDNN)
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include/tkDNN
+                    ${CMAKE_CURRENT_SOURCE_DIR}/libsmctrl
+                    )
+
+link_directories(${CMAKE_CURRENT_SOURCE_DIR}/libsmctrl)
 
 # project specific flags
 if(DEBUG)
@@ -130,7 +134,7 @@ endif()
 # Build Libraries
 #-------------------------------------------------------------------------------
 file(GLOB tkdnn_SRC "src/*.cpp")
-set(tkdnn_LIBS kernels ${CUDA_LIBRARIES} ${CUDA_CUBLAS_LIBRARIES} ${CUDNN_LIBRARIES} ${OpenCV_LIBS} yaml-cpp)
+set(tkdnn_LIBS kernels ${CUDA_LIBRARIES} ${CUDA_CUBLAS_LIBRARIES} ${CUDNN_LIBRARIES} ${OpenCV_LIBS} smctrl yaml-cpp ) #smctrl
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include ${CUDA_INCLUDE_DIRS} ${OPENCV_INCLUDE_DIRS} ${NVINFER_INCLUDES})
